@@ -340,18 +340,34 @@
       try {
         const cred = await signInWithEmailAndPassword(auth, email, pass);
 
-        // Fetch user profile (includes 6-digit ID)
-        const profileSnap = await getDoc(doc(db, 'users', cred.user.uid));
-        const profile = profileSnap.exists() ? profileSnap.data() : {};
+        // Extract name and userId — try Firestore first, fallback to displayName
+        let name   = cred.user.displayName || email.split('@')[0];
+        let userId = '——';
+
+        // Check if displayName has embedded userId (format: "Name||123456")
+        if (cred.user.displayName && cred.user.displayName.includes('||')) {
+          const parts = cred.user.displayName.split('||');
+          name   = parts[0];
+          userId = parts[1];
+        }
+
+        // Try to get from Firestore (more reliable)
+        try {
+          const profileSnap = await getDoc(doc(db, 'users', cred.user.uid));
+          if (profileSnap.exists()) {
+            const profile = profileSnap.data();
+            name   = profile.name   || name;
+            userId = profile.userId || userId;
+          }
+        } catch (firestoreErr) {
+          console.warn('Firestore read failed, using fallback:', firestoreErr);
+        }
 
         justLoggedIn = true;
         sessionStorage.setItem('st_user', JSON.stringify({
-          uid:    cred.user.uid,
-          name:   cred.user.displayName || profile.name || email.split('@')[0],
-          email:  cred.user.email,
-          userId: profile.userId || '——'
+          uid: cred.user.uid, name, email: cred.user.email, userId
         }));
-        showToast('Welcome back!');
+        showToast(`Welcome back, ${name}!`);
         setTimeout(() => window.location.href = 'index.html', 600);
       } catch (e) {
         showError(friendlyError(e.code));
@@ -370,24 +386,33 @@
 
       setLoading('btnRegister', true);
       try {
-        const cred   = await createUserWithEmailAndPassword(auth, email, pass);
-        await updateProfile(cred.user, { displayName: name });
+        // 1. Create auth account
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
 
-        // Generate unique 6-digit user ID
-        const userId = await generateUserId();
+        // 2. Generate unique 6-digit user ID
+        let userId = null;
+        try {
+          userId = await generateUserId();
+          // Save user profile in Firestore
+          await setDoc(doc(db, 'users', cred.user.uid), {
+            name, email, userId, createdAt: new Date().toISOString()
+          });
+          // Reserve the 6-digit ID
+          await setDoc(doc(db, 'userIds', userId), { uid: cred.user.uid });
+        } catch (firestoreErr) {
+          console.error('Firestore error:', firestoreErr);
+          // Fallback: generate a local ID if Firestore fails
+          userId = String(Math.floor(100000 + Math.random() * 900000));
+        }
 
-        // Save user profile in Firestore
-        await setDoc(doc(db, 'users', cred.user.uid), {
-          name, email, userId, createdAt: new Date().toISOString()
-        });
-        // Reserve the 6-digit ID
-        await setDoc(doc(db, 'userIds', userId), { uid: cred.user.uid });
+        // 3. Update display name with userId embedded
+        await updateProfile(cred.user, { displayName: `${name}||${userId}` });
 
         justLoggedIn = true;
         sessionStorage.setItem('st_user', JSON.stringify({
           uid: cred.user.uid, name, email, userId
         }));
-        showSuccess(`Account created! Your User ID: ${userId}`);
+        showSuccess(`✓ Account created! Your User ID: ${userId}`);
         setTimeout(() => window.location.href = 'index.html', 1500);
       } catch (e) {
         showError(friendlyError(e.code));
