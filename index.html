@@ -641,10 +641,103 @@
     }
     .toast.show { opacity: 1; transform: translateY(0); }
 
-    @media (max-width: 750px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar { flex-direction: row; flex-wrap: wrap; position: static; }
-      .stat-card { flex: 1; min-width: 140px; }
+    @media (max-width: 768px) {
+      /* Layout: single column */
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      /* Sidebar: horizontal wrapping row, each stat card 50% */
+      .sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        position: static;
+        gap: 8px;
+      }
+      .stat-card {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+      }
+
+      /* Header nav: wrap and center */
+      .header > div {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      /* Form rows: stack vertically */
+      .form-row {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .form-group {
+        max-width: 100% !important;
+        min-width: 0;
+      }
+      .btn-add {
+        align-self: stretch;
+        text-align: center;
+      }
+
+      /* Filter wrap: stack vertically */
+      .filter-wrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .filter-wrap select,
+      .filter-wrap input[type="month"] {
+        width: 100%;
+      }
+      .btn-clear-all {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      /* Section label with filter: stack vertically */
+      .section-label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      /* Profile card: full width */
+      #profileCard {
+        width: calc(100% - 32px) !important;
+        right: 16px !important;
+        left: 16px !important;
+        top: 60px !important;
+      }
+
+      /* FAB group: move to bottom, 2x2 grid */
+      .fab-group {
+        top: auto;
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .fab-btn {
+        justify-content: center;
+        border-radius: 12px;
+      }
+
+      /* Export modal: full width */
+      #exportModal {
+        width: calc(100% - 32px) !important;
+        max-width: 100% !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+      }
+
+      /* Add bottom padding so FAB doesn't overlap content */
+      body {
+        padding-bottom: 100px;
+      }
     }
   </style>
 </head>
